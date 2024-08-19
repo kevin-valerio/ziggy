@@ -12,26 +12,26 @@ pub use honggfuzz::fuzz as honggfuzz_fuzz;
 #[cfg(not(any(feature = "afl", feature = "honggfuzz", feature = "coverage")))]
 pub fn read_file_and_fuzz<F>(mut closure: F, file: String)
 where
-    F: FnMut(&[u8]),
+	F: FnMut(&[u8]),
 {
-    use std::{fs::File, io::Read};
-    println!("Now running file {file}");
-    let mut buffer: Vec<u8> = Vec::new();
-    match File::open(file) {
-        Ok(mut f) => {
-            match f.read_to_end(&mut buffer) {
-                Ok(_) => {
-                    closure(buffer.as_slice());
-                }
-                Err(e) => {
-                    println!("Could not get data from file: {e}");
-                }
-            };
-        }
-        Err(e) => {
-            println!("Error opening file: {e}");
-        }
-    };
+	use std::{fs::File, io::Read};
+	println!("Now running file {file}");
+	let mut buffer: Vec<u8> = Vec::new();
+	match File::open(file) {
+		Ok(mut f) => {
+			match f.read_to_end(&mut buffer) {
+				Ok(_) => {
+					closure(buffer.as_slice());
+				},
+				Err(e) => {
+					println!("Could not get data from file: {e}");
+				},
+			};
+		},
+		Err(e) => {
+			println!("Error opening file: {e}");
+		},
+	};
 }
 
 // This is our special coverage harness runner.
@@ -40,45 +40,45 @@ where
 #[cfg(feature = "coverage")]
 pub fn read_file_and_fuzz<F>(mut closure: F, file: String)
 where
-    F: FnMut(&[u8]),
+	F: FnMut(&[u8]),
 {
-    use std::{fs::File, io::Read, process::exit};
-    println!("Now running file {file} for coverage");
-    let mut buffer: Vec<u8> = Vec::new();
-    match File::open(file) {
-        Ok(mut f) => {
-            match f.read_to_end(&mut buffer) {
-                Ok(_) => {
-                    use crate::fork::{fork, Fork};
+	use std::{fs::File, io::Read, process::exit};
+	println!("Now running file {file} for coverage");
+	let mut buffer: Vec<u8> = Vec::new();
+	match File::open(file) {
+		Ok(mut f) => {
+			match f.read_to_end(&mut buffer) {
+				Ok(_) => {
+					use crate::fork::{fork, Fork};
 
-                    match fork() {
-                        Ok(Fork::Parent(child)) => {
-                            println!(
-                                "Continuing execution in parent process, new child has pid: {}",
-                                child
-                            );
-                            unsafe {
-                                let mut status = 0i32;
-                                let _ = libc::waitpid(child, &mut status, 0);
-                            }
-                            println!("Child is done, moving on");
-                        }
-                        Ok(Fork::Child) => {
-                            closure(buffer.as_slice());
-                            exit(0);
-                        }
-                        Err(_) => println!("Fork failed"),
-                    }
-                }
-                Err(e) => {
-                    println!("Could not get data from file: {e}");
-                }
-            };
-        }
-        Err(e) => {
-            println!("Error opening file: {e}");
-        }
-    };
+					match fork() {
+						Ok(Fork::Parent(child)) => {
+							println!(
+								"Continuing execution in parent process, new child has pid: {}",
+								child
+							);
+							unsafe {
+								let mut status = 0i32;
+								let _ = libc::waitpid(child, &mut status, 0);
+							}
+							println!("Child is done, moving on");
+						},
+						Ok(Fork::Child) => {
+							closure(buffer.as_slice());
+							exit(0);
+						},
+						Err(_) => println!("Fork failed"),
+					}
+				},
+				Err(e) => {
+					println!("Could not get data from file: {e}");
+				},
+			};
+		},
+		Err(e) => {
+			println!("Error opening file: {e}");
+		},
+	};
 }
 
 // This is our middle harness handler macro for the runner and for coverage.
@@ -87,30 +87,30 @@ where
 #[macro_export]
 #[cfg(not(any(feature = "afl", feature = "honggfuzz")))]
 macro_rules! read_args_and_fuzz {
-    ( |$buf:ident| $body:block ) => {
-        use std::{env, fs};
-        let args: Vec<String> = env::args().collect();
-        for path in &args[1..] {
-            if let Ok(metadata) = fs::metadata(&path) {
-                let files = match metadata.is_dir() {
-                    true => fs::read_dir(&path)
-                        .unwrap()
-                        .map(|x| x.unwrap().path())
-                        .filter(|x| x.is_file())
-                        .map(|x| x.to_str().unwrap().to_string())
-                        .collect::<Vec<String>>(),
-                    false => vec![path.to_string()],
-                };
+	( |$buf:ident| $body:block ) => {
+		use std::{env, fs};
+		let args: Vec<String> = env::args().collect();
+		for path in &args[1..] {
+			if let Ok(metadata) = fs::metadata(&path) {
+				let files = match metadata.is_dir() {
+					true => fs::read_dir(&path)
+						.unwrap()
+						.map(|x| x.unwrap().path())
+						.filter(|x| x.is_file())
+						.map(|x| x.to_str().unwrap().to_string())
+						.collect::<Vec<String>>(),
+					false => vec![path.to_string()],
+				};
 
-                for file in files {
-                    $crate::read_file_and_fuzz(|$buf| $body, file);
-                }
-                println!("Finished reading all files");
-            } else {
-                println!("Could not read metadata for {path}");
-            }
-        }
-    };
+				for file in files {
+					$crate::read_file_and_fuzz(|$buf| $body, file);
+				}
+				println!("Finished reading all files");
+			} else {
+				println!("Could not read metadata for {path}");
+			}
+		}
+	};
 }
 
 /// Fuzz a closure-like block of code by passing an object of arbitrary type.
@@ -136,25 +136,25 @@ macro_rules! read_args_and_fuzz {
 #[macro_export]
 #[cfg(not(any(feature = "afl", feature = "honggfuzz")))]
 macro_rules! fuzz {
-    (|$buf:ident| $body:block) => {
-        $crate::read_args_and_fuzz!(|$buf| $body);
-    };
-    (|$buf:ident: &[u8]| $body:block) => {
-        $crate::read_args_and_fuzz!(|$buf| $body);
-    };
-    (|$buf:ident: $dty: ty| $body:block) => {
-        $crate::read_args_and_fuzz!(|$buf| {
-            let $buf: $dty = {
-                let mut data = ::arbitrary::Unstructured::new($buf);
-                if let Ok(d) = ::arbitrary::Arbitrary::arbitrary(&mut data).map_err(|_| "") {
-                    d
-                } else {
-                    return;
-                }
-            };
-            $body
-        });
-    };
+	(|$buf:ident| $body:block) => {
+		$crate::read_args_and_fuzz!(|$buf| $body);
+	};
+	(|$buf:ident: &[u8]| $body:block) => {
+		$crate::read_args_and_fuzz!(|$buf| $body);
+	};
+	(|$buf:ident: $dty: ty| $body:block) => {
+		$crate::read_args_and_fuzz!(|$buf| {
+			let $buf: $dty = {
+				let mut data = ::arbitrary::Unstructured::new($buf);
+				if let Ok(d) = ::arbitrary::Arbitrary::arbitrary(&mut data).map_err(|_| "") {
+					d
+				} else {
+					return;
+				}
+			};
+			$body
+		});
+	};
 }
 
 #[macro_export]
